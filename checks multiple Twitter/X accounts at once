@@ -1,0 +1,61 @@
+import tweepy
+import datetime
+import os
+from pathlib import Path
+
+# === Settings ===
+USERNAMES = ["SentientAGI", "Sidekick_Labs", "OpenDevs"]  # add the accounts you want
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
+
+# === API Keys (create at https://developer.x.com/) ===
+API_KEY = os.getenv("TWITTER_API_KEY")
+API_SECRET = os.getenv("TWITTER_API_SECRET")
+ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN")
+ACCESS_SECRET = os.getenv("TWITTER_ACCESS_SECRET")
+
+# === Authentication ===
+auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
+api = tweepy.API(auth)
+
+def get_last_tweet_id(username):
+    path = DATA_DIR / f"{username}_last.txt"
+    if path.exists():
+        return path.read_text().strip()
+    return None
+
+def save_last_tweet_id(username, tweet_id):
+    path = DATA_DIR / f"{username}_last.txt"
+    path.write_text(str(tweet_id))
+
+def get_new_tweets(username):
+    last_id = get_last_tweet_id(username)
+    tweets = api.user_timeline(screen_name=username, since_id=last_id, tweet_mode="extended", count=20)
+    if tweets:
+        save_last_tweet_id(username, tweets[0].id)
+    return tweets
+
+def main():
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    print(f"📢 Daily Twitter update summary — {today}\n")
+
+    updates = []
+    for username in USERNAMES:
+        tweets = get_new_tweets(username)
+        if tweets:
+            updates.append(f"🧠 @{username} — {len(tweets)} new tweets")
+            for t in reversed(tweets):
+                updates.append(f"• {t.created_at.strftime('%H:%M')} — {t.full_text[:120]}...")
+        else:
+            updates.append(f"🕊 @{username} — no new tweets today")
+
+    # Save report
+    report_path = Path("reports") / f"summary_{today}.md"
+    Path("reports").mkdir(exist_ok=True)
+    report_path.write_text("\n".join(updates), encoding="utf-8")
+
+    print("\n".join(updates))
+    print(f"\n✅ Saved report: {report_path}")
+
+if __name__ == "__main__":
+    main()
