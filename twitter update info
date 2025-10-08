@@ -1,0 +1,7 @@
+What this code does
+
+Checks for updates from @SentientAGI every day at 7:00 PM (UTC+5).
+
+Saves the ID of the latest tweet to avoid duplicates.
+
+Prints any new tweets directly in the GitHub Actions log (you can later extend this to send the output elsewhere).
